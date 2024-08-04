@@ -1,12 +1,12 @@
 import torch
-import torch.nn as nn
-import torchvision
 from torchvision.datasets import CIFAR10
 from torch.utils.data import DataLoader
 from torchvision import transforms
 import matplotlib.pyplot as plt
-import numpy as np
 from unet import Unet
+import matplotlib.pyplot as plt
+import numpy as np
+from noise_scheduler import NoiseScheduler
 
 ## Autoencoder -> Compressing image features to a smaller latent space using KL regularization 
 ## Generating the image from the trained latent representation - unets?
@@ -21,6 +21,12 @@ from unet import Unet
 ## Conditional model - conditional denoising autoencoders
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+## Function to display a tensor as an image
+def display_image(tensor):
+    tensor = tensor.detach().cpu().numpy()
+    plt.imshow(np.transpose(tensor, (1, 2, 0)))
+    plt.show()
 
 # Loading and processing the dataset
 
@@ -65,3 +71,11 @@ print(image_sample.shape)
 model = Unet()
 output = model(image_sample[0])
 print(output.shape)
+
+
+noise = NoiseScheduler(timesteps=1000, beta_start=0.1, beta_end=0.2)
+x_t, noise = noise.forward_diffusion(image_sample[0], 999)
+print(x_t.shape)
+print(noise.shape)
+display_image(x_t)
+display_image(x_t)
