@@ -58,9 +58,8 @@ testloader = DataLoader(
     shuffle = True
 )
 
-
     
-## Testing the minor implementation of the encoder -> not yet complete
+## Testing the implementation of the Unet 
 image_sample, label_sample = next(iter(trainloader))
 print(image_sample.shape)
 model = Unet()
