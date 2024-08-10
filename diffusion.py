@@ -7,6 +7,10 @@ from unet import Unet
 import matplotlib.pyplot as plt
 import numpy as np
 from noise_scheduler import NoiseScheduler
+from utils import display_image
+
+# from utils import load_ckpt
+# load_ckpt('models/sd-v1-4.ckpt')
 
 ## Autoencoder -> Compressing image features to a smaller latent space using KL regularization 
 ## Generating the image from the trained latent representation - unets?
@@ -21,12 +25,6 @@ from noise_scheduler import NoiseScheduler
 ## Conditional model - conditional denoising autoencoders
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-## Function to display a tensor as an image
-def display_image(tensor):
-    tensor = tensor.detach().cpu().numpy()
-    plt.imshow(np.transpose(tensor, (1, 2, 0)))
-    plt.show()
 
 # Loading and processing the dataset
 
@@ -65,17 +63,58 @@ testloader = DataLoader(
 )
 
     
-## Testing the implementation of the Unet 
-image_sample, label_sample = next(iter(trainloader))
-print(image_sample.shape)
-model = Unet()
-output = model(image_sample[0])
-print(output.shape)
+# Testing the implementation of the Unet 
+# image_sample, label_sample = next(iter(trainloader))
+# print(image_sample.shape)
+# model = Unet()
+# output = model(image_sample[0])
+# print(output.shape)
 
 
 noise = NoiseScheduler(timesteps=1000, beta_start=0.1, beta_end=0.2)
-x_t, noise = noise.forward_diffusion(image_sample[0], 999)
-print(x_t.shape)
-print(noise.shape)
-display_image(x_t)
-display_image(x_t)
+# x_t, noise = noise.forward_diffusion(image_sample[0], 999)
+# print(x_t.shape)
+# print(noise.shape)
+# display_image(x_t)
+# display_image(x_t)
+
+
+## Create a training loop - image goes into the noise scheduler and the output is passed to the unet
+
+# Training loop
+model = Unet().to(device)
+model.train()
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+criterion = torch.nn.MSELoss()
+
+# TO-DO:
+# Use kl divergence loss for the latent space
+# Use mse loss for the image space
+# Use the sum of the two losses for the final loss
+
+for epoch in range(10):
+    for i, (images, _) in enumerate(trainloader):
+        images = images.to(device)
+        optimizer.zero_grad()
+        x_t, noise = noise.forward_diffusion(images, 999)
+        output = model(x_t)
+        loss = criterion(output, images)
+        loss.backward()
+        optimizer.step()
+        if i % 100 == 0:
+            print(f"Epoch: {epoch}, Loss: {loss.item()}")
+            # display_image(output[0])
+            # display_image(images[0])
+            # display_image(x_t[0])
+            print("\n\n")
+
+
+# Testing the model
+model.eval()
+image_sample, label_sample = next(iter(testloader))
+output = model(image_sample)
+display_image(output[0])
+display_image(image_sample[0])
+
+# Save the model
+torch.save(model.state_dict(), 'models/sd-v1-4.ckpt')
